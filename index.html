@@ -262,6 +262,23 @@ textarea{width:100%;min-height:110px;font-family:var(--mono);font-size:12px;bord
 .pgrid .n{font-family:var(--display);font-weight:800;font-size:22px;line-height:1}
 .pgrid .nm{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .pgrid button:active{background:var(--flash)}
+.plgroup{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.plgroup h4{margin:0;font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.plgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.plgrid button{border:1px solid var(--line);background:var(--raised);border-radius:10px;min-height:46px;padding:4px;font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.03em;line-height:1.05;min-width:0;overflow-wrap:anywhere}
+.plgrid button:active{background:var(--flash)}
+.plgrid button.again{grid-column:1/-1;background:var(--royal);border-color:var(--royal);color:var(--royal-ink)}
+.plgrid button.again small{font-family:var(--body);font-weight:500;font-size:11px;letter-spacing:.04em;text-transform:uppercase;opacity:.8;margin-right:6px}
+.plgrid button.other{background:var(--surface);color:var(--muted)}
+.shotsum{background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;text-align:center}
+.pr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.pr .pn{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.03em;line-height:1.1;min-width:0}
+.pr .pn small{font-family:var(--body);font-weight:600;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-left:6px;vertical-align:2px}
+.pr .pp{grid-row:span 2;text-align:right;font-family:var(--display);font-weight:800;font-size:28px;line-height:1;color:var(--royal);font-variant-numeric:tabular-nums}
+.pr .pp small{display:block;font-family:var(--body);font-weight:500;font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.pr .ps{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:12px;color:var(--muted)}
+.pr .ps b{color:var(--fg);font-variant-numeric:tabular-nums}
+.plfilter{display:flex;gap:6px;flex-wrap:wrap}
 .ovfoot{display:flex;gap:8px}
 .ovfoot .btn{flex:1}
 .btn.go{background:var(--royal);border-color:var(--royal);color:var(--royal-ink);font-weight:600}
@@ -345,6 +362,12 @@ textarea{width:100%;min-height:110px;font-family:var(--mono);font-size:12px;bord
       <div class="legend"><span><svg viewBox="-1 -1 2 2"><circle r=".75" class="mk-make" style="stroke-width:.3"/></svg>Make</span><span><svg viewBox="-1 -1 2 2"><path d="M-.7-.7L.7.7M.7-.7L-.7.7" class="mk-miss" style="stroke-width:.3"/></svg>Miss</span><span id="scsum"></span></div>
     </section>
     <section class="card">
+      <h2 style="margin:0">Plays · what's working</h2>
+      <p class="note" style="margin:0">Every Crestwood shot tagged with a play. Most points first.</p>
+      <div class="plfilter pills" id="plfilter"></div>
+      <div class="dlist" id="plist"></div>
+    </section>
+    <section class="card">
       <h2 style="margin:0">Defense · how each look is working</h2>
       <p class="note" style="margin:0">Everything that happened while each defense was called. Best plus/minus first.</p>
       <div class="dlist" id="dlist"></div>
@@ -393,8 +416,9 @@ textarea{width:100%;min-height:110px;font-family:var(--mono);font-size:12px;bord
       <button class="msb" id="ovmiss" aria-pressed="false"><svg viewBox="-1 -1 2 2"><path d="M-.65-.65L.65.65M.65-.65L-.65.65" class="mk-miss" style="stroke-width:.24"/></svg>Miss</button>
     </div>
     <div id="ovcourtbox"><p class="hint" id="ovhint">Pick make or miss, then tap where it was shot from.</p><div id="ovcourt"></div></div>
-    <div id="ovplayers" hidden><p class="hint" style="margin-bottom:8px"><b>Who shot it?</b> Tapping a player saves the shot.</p><div class="pgrid" id="pgrid"></div></div>
-    <div class="ovfoot"><button class="btn" id="ovnoshooter" hidden>Save without shooter</button><button class="btn go" id="ovsave" hidden>Save shot</button></div>
+    <div id="ovplayers" hidden><p class="hint" style="margin-bottom:8px"><b>Who shot it?</b> Then you'll pick the play.</p><div class="pgrid" id="pgrid"></div></div>
+    <div id="ovplays" hidden><div class="shotsum" id="shotsum"></div><p class="hint" style="margin:10px 0 8px"><b>What play was it?</b> Tapping a play saves the shot.</p><div id="playgrid"></div></div>
+    <div class="ovfoot"><button class="btn" id="ovback" hidden>← Back</button><button class="btn" id="ovnoshooter" hidden>Skip shooter</button><button class="btn go" id="ovsave" hidden>Save shot</button></div>
   </div>
 </div>
 <div class="ov" id="subov" hidden>
@@ -414,10 +438,15 @@ const US_TEAM=[["5050","50/50 balls"],["GUM","Gave up middle"],["KILL","Kills"],
 const OPP_TEAM=[["O5050","50/50 balls"],["DBO","Def rebounds"],["OBO","Off rebounds"],["OTO","Turnovers"],["PTO","Paint touches"]];
 const TEAM=[...US_TEAM,...OPP_TEAM]; const OPPK=new Set(OPP_TEAM.map(x=>x[0]));
 const DEFS=[["MAN","Man","","Man-to-man"],["Z32","3-2","zone","3-2 zone"],["Z23","2-3","zone","2-3 zone"],["PM","Press","→ man","Zone press → man"],["PZ","Press","→ zone","Zone press → zone"]];
+const PLAYBOOK=[["Sets",["FLOW","SWING","SNAP","STACK","NOVA","SLICE","DIAMOND","UP","BROTHERS","CHEST","DOUBLE","POINT","HIP","MEMPHIS","RAPTOR","EMPTY","HEADTAP","CROSS (ATO)"]],
+  ["Zone offense",["OHIO","KENTUCKY","TRIANGLE","DUKE"]],["BLOB",["DIAMOND","BOX","DOORS","LINE"]],["Other",["TRANSITION","NO SET"]]];
+const PLAYS=PLAYBOOK.flatMap(([g,l])=>l.map(n=>({id:g+":"+n,name:n,group:g})));
+const PLAY=Object.fromEntries(PLAYS.map(p=>[p.id,p]));
+const playName=id=>{const p=PLAY[id];return p?(p.group==="BLOB"?"BLOB "+p.name:p.group==="Other"?p.name.charAt(0)+p.name.slice(1).toLowerCase():p.name):id};
 const DEFNAME=Object.fromEntries(DEFS.map(d=>[d[0],d[3]]));
 const LABEL=Object.fromEntries([...PSTATS,...TEAM,["SHOT","Shot"],["LINEUP","Lineup"],["DEFENSE","Defense"]]); LABEL.DREB="Def rebound"; LABEL.OREB="Off rebound";
 const ROSTER=[["0",'Melvern "Juju" Allen-Peart',"Juju A."],["2","Mekhi Martin-Burrows","Mekhi M."],["3","Mikahael Bartley","Mikahael B."],["10","Jayden Fagbohunka","Jayden F."],["11","Tyylon Ennis","Tyylon E."],["13","Joord Blasko","Joord B."],["14","Lual Machot","Lual M."],["24","Markeese Strawbridge","Markeese S."],["25","Avin Glover","Avin G."]];
-const KEY="bench-stat-sheet-v5";
+const KEY="bench-stat-sheet-v6";
 const HOOP={x:25,y:5.25};
 
 // ---------- example game ----------
@@ -448,7 +477,9 @@ function example(){
     if(j%14===0){di=(di+1)%dorder.length;ev.push({k:"DEFENSE",d:dorder[di],q:s.q,t:++i})}
     delete s.o; s.t=++i;
     if(s.k!=="SHOT"){ev.push(s);return}
-    const five=fives[li]; if(s.team==="us")s.pid=five[Math.floor(r()*5)];
+    const five=fives[li]; if(s.team==="us"){s.pid=five[Math.floor(r()*5)];
+      const pool=["Sets:FLOW","Sets:FLOW","Sets:SWING","Sets:SNAP","Sets:STACK","Sets:NOVA","Sets:CHEST","Sets:MEMPHIS","Sets:HEADTAP","Zone offense:OHIO","Zone offense:KENTUCKY","BLOB:BOX","BLOB:DOORS","Other:TRANSITION","Other:TRANSITION","Other:NO SET"];
+      s.play=pool[Math.floor(r()*pool.length)]}
     if(s.pts>1)s.made=r()<(s.team==="us"?.47+tilt[li]:.45-tilt[li]-dtilt[dorder[di]]); ev.push(s)});
   return {example:true,opp:"Ft Erie",oppImg:null,period:2,view:"sheet",range:"game",scTeam:"us",scPlayer:"",lastTeam:"us",players,events:ev,flimit:5,blimit:5,minus:false};
 }
@@ -548,6 +579,16 @@ function openShot(pts){pend={pts,team:st.lastTeam||"us",made:null,x:null,y:null}
 function closeShot(){pend=null;$("ov").hidden=true;document.body.style.overflow=""}
 function renderOv(){
   const p=pend; const ft=p.pts===1;
+  const inPlay=p.stage==="play";
+  $("ovteam").hidden=inPlay; document.querySelector("#ov .mm").hidden=inPlay; $("ovplays").hidden=!inPlay; $("ovback").hidden=!inPlay;
+  if(inPlay){
+    $("ovcourtbox").hidden=true; $("ovplayers").hidden=true; $("ovnoshooter").hidden=true; $("ovsave").hidden=true;
+    $("shotsum").innerHTML=`<b>${esc(p.pid?who(p.pid):"Crestwood")}</b> · ${ft?"FT":p.pts+" PT"} <span style="color:var(${p.made?"--make":"--miss"});font-weight:700">${p.made?"make":"miss"}</span>${!ft&&p.x!=null?" · "+zone(p):""}`;
+    const again=st.lastPlay&&PLAY[st.lastPlay]?`<div class="plgrid" style="margin-bottom:10px"><button class="again" data-play="${esc(st.lastPlay)}"><small>Same play</small>${esc(playName(st.lastPlay))}</button></div>`:"";
+    $("playgrid").innerHTML=again+PLAYBOOK.map(([g,l])=>`<div class="plgroup"><h4>${g}</h4><div class="plgrid">${l.map(n=>`<button class="${g==="Other"?"other":""}" data-play="${esc(g+":"+n)}">${esc(g==="Other"?(n==="NO SET"?"No set / free play":"Transition"):n)}</button>`).join("")}</div></div>`).join("");
+    const n=ft?4:5; $("steps").innerHTML=(ft?["Team","Make / miss","Shooter","Play"]:["Team","Make / miss","Spot","Shooter","Play"]).map((s,i)=>`<span class="${i<n-1?"done":"on"}">${s}</span>`).join("");
+    $("ovtitle").textContent="Pick the play"; return;
+  }
   $("ovtitle").textContent=ft?"Free throw":p.pts+"-point shot";
   $("ovteam").innerHTML=`<button data-team="us" aria-pressed="${p.team==="us"}">Crestwood</button><button data-team="opp" aria-pressed="${p.team==="opp"}">${esc(oppName())}</button>`;
   $("ovmake").setAttribute("aria-pressed",p.made===true); $("ovmiss").setAttribute("aria-pressed",p.made===false);
@@ -563,18 +604,18 @@ function renderOv(){
   if(ready&&needPlayer){const oc=onCourt();const order=[...st.players].sort((a,b)=>oc.includes(b.id)-oc.includes(a.id));
     $("pgrid").innerHTML=order.map(pl=>{const on=oc.includes(pl.id);return `<button data-shooter="${pl.id}" class="${on?"on":""}"><span class="n">${esc(pl.num)}</span><span class="nm">${esc(pl.short)}</span>${oc.length?`<span class="tag">${on?"On court":"&nbsp;"}</span>`:""}</button>`}).join("")}
   $("ovnoshooter").hidden=!(ready&&needPlayer); $("ovsave").hidden=!(ready&&!needPlayer);
-  const stepNames=ft?["Team","Make / miss",needPlayer?"Shooter":"Save"]:["Team","Make / miss","Spot",needPlayer?"Shooter":"Save"];
+  const stepNames=ft?["Team","Make / miss",needPlayer?"Shooter":"Save"]:["Team","Make / miss","Spot",needPlayer?"Shooter":"Save"]; if(needPlayer)stepNames.push("Play");
   const cur=p.made===null?1:!located?2:ft?2:3;
   $("steps").innerHTML=stepNames.map((s,i)=>`<span class="${i<cur?"done":i===cur?"on":""}">${s}</span>`).join("");
 }
 function courtTap(ev){if(!pend)return;if(pend.made===null){toast("Pick make or miss first");return}
   const {x,y}=svgPoint(ev.currentTarget,ev);pend.x=x;pend.y=y;renderOv();
   if(!$("ovplayers").hidden)$("ovplayers").scrollIntoView({block:"nearest",behavior:"smooth"});}
-function commitShot(pid){
-  const p=pend; const e={k:"SHOT",team:p.team,pts:p.pts,made:p.made,x:p.x,y:p.y,pid:p.team==="us"?(pid||null):null,q:st.period,t:Date.now()};
-  st.events.push(e); st.lastTeam=p.team; st.example=false; last=null;
+function commitShot(){
+  const p=pend; const us=p.team==="us"; const e={k:"SHOT",team:p.team,pts:p.pts,made:p.made,x:p.x,y:p.y,pid:us?(p.pid||null):null,play:us?(p.play||null):null,q:st.period,t:Date.now()};
+  st.events.push(e); st.lastTeam=p.team; if(e.play)st.lastPlay=e.play; st.example=false; last=null;
   const by=e.team==="us"?(e.pid?who(e.pid):"Crestwood"):oppName();
-  toast(`${by}: ${e.pts===1?"FT":e.pts+" PT"} ${e.made?"make":"miss"}${e.pts>1?" · "+zone(e):""}`);
+  toast(`${by}: ${e.pts===1?"FT":e.pts+" PT"} ${e.made?"make":"miss"}${e.pts>1?" · "+zone(e):""}${e.play?" · "+playName(e.play):""}`);
   closeShot(); save(); render();
 }
 
@@ -652,6 +693,17 @@ function renderAnalysis(){
   $("scwrap").innerHTML=courtSVG(marks);
   const mm=marks.filter(e=>e.made).length; $("scsum").textContent=marks.length?`${mm}-${marks.length} from the field (${Math.round(mm/marks.length*100)}%)`:"No shots charted yet";
   const sel=$("scplayer"); if(sel)sel.onchange=e=>{st.scPlayer=e.target.value;save();renderAnalysis()};
+  // plays
+  const pg=st.plGroup||"all";
+  $("plfilter").innerHTML=[["all","All"],["Sets","Sets"],["Zone offense","Zone"],["BLOB","BLOB"]].map(([k,l])=>`<button data-plg="${k}" aria-pressed="${pg===k}">${l}</button>`).join("");
+  const PS={};
+  for(const e of sh("us",e=>!!e.play)){const p=PLAY[e.play];if(!p||(pg!=="all"&&p.group!==pg))continue;
+    const o=PS[e.play]||(PS[e.play]={id:e.play,n:0,pts:0,fgm:0,fga:0,tpm:0,tpa:0,ftm:0,fta:0});
+    o.n++;if(e.made)o.pts+=e.pts;if(e.pts>1){o.fga++;if(e.made)o.fgm++}if(e.pts===3){o.tpa++;if(e.made)o.tpm++}if(e.pts===1){o.fta++;if(e.made)o.ftm++}}
+  const PL=Object.values(PS).sort((a,b)=>b.pts-a.pts||b.pts/b.n-a.pts/a.n);
+  $("plist").innerHTML=PL.length?PL.map(o=>{const p=PLAY[o.id];return `<div class="pr"><span class="pn">${esc(playName(o.id))}<small>${p.group==="Sets"?"Set":p.group==="Zone offense"?"Zone":p.group}</small></span><span class="pp">${o.pts}<small>pts</small></span>
+    <div class="ps"><span>FG <b>${o.fgm}-${o.fga}</b>${o.fga?` (${Math.round(o.fgm/o.fga*100)}%)`:""}</span>${o.tpa?`<span>3PT <b>${o.tpm}-${o.tpa}</b></span>`:""}${o.fta?`<span>FT <b>${o.ftm}-${o.fta}</b></span>`:""}<span>Pts per shot <b>${(o.pts/o.n).toFixed(2)}</b></span></div></div>`}).join("")
+    :`<p class="note" style="margin:0">No plays tagged${pg!=="all"?" in this group":""} yet. After you pick the shooter on a Crestwood shot, tap the play it came from.</p>`;
   // defense
   const DS=defenseSplits(inR), cdef=curDef();
   $("dlist").innerHTML=DS.length?DS.map(o=>{const pm=o.pf-o.pa;return `<div class="dr ${o.d===cdef?"now":""}"><span class="dn">${DEFNAME[o.d]}${o.d===cdef?"<small>In it now</small>":""}</span><span class="pm ${pmCls(pm)}">${fmtPM(pm)}</span>
@@ -672,7 +724,7 @@ function renderAnalysis(){
 }
 function logText(e){
   if(e.k==="SHOT"){const by=e.team==="us"?(e.pid?who(e.pid):"Crestwood"):oppName();
-    return `${esc(by)} — ${e.pts===1?"FT":e.pts+" PT"} <span class="${e.made?"mk":"ms"}">${e.made?"make":"miss"}</span>${e.pts>1&&e.x!=null?" · "+zone(e):""}`}
+    return `${esc(by)} — ${e.pts===1?"FT":e.pts+" PT"} <span class="${e.made?"mk":"ms"}">${e.made?"make":"miss"}</span>${e.pts>1&&e.x!=null?" · "+zone(e):""}${e.play?" · <b>"+esc(playName(e.play))+"</b>":""}`}
   if(e.k==="DEFENSE")return `Defense — <b>${DEFNAME[e.d]}</b>`;
   if(e.k==="LINEUP")return `Sub — on court: ${byNum(e.ids).map(id=>"#"+esc(st.players.find(p=>p.id===id)?.num??"?")).join(" ")}`;
   if(OPPK.has(e.k))return `${esc(oppName())} — ${LABEL[e.k]}`;
@@ -712,8 +764,11 @@ document.addEventListener("click",e=>{
   if(b.dataset.team){pend.team=b.dataset.team;renderOv();return}
   if(b.id==="ovmake"||b.id==="ovmiss"){pend.made=b.id==="ovmake";renderOv();
     if(pend.pts===1&&!$("ovplayers").hidden)$("ovplayers").scrollIntoView({block:"nearest",behavior:"smooth"});return}
-  if(b.dataset.shooter){commitShot(b.dataset.shooter);return}
-  if(b.id==="ovnoshooter"||b.id==="ovsave"){commitShot(null);return}
+  if(b.dataset.shooter){pend.pid=b.dataset.shooter;pend.stage="play";renderOv();$("ov").querySelector(".ovcard").scrollTop=0;return}
+  if(b.id==="ovnoshooter"){pend.pid=null;pend.stage="play";renderOv();$("ov").querySelector(".ovcard").scrollTop=0;return}
+  if(b.dataset.play){pend.play=b.dataset.play;commitShot();return}
+  if(b.id==="ovback"){pend.stage=null;pend.play=null;renderOv();return}
+  if(b.id==="ovsave"){commitShot();return}
   if(b.dataset.shot){openShot(+b.dataset.shot);return}
   if(b.dataset.def){const d=b.dataset.def;if(curDef()===d){toast(`Already in ${DEFNAME[d]}`);return}
     st.events.push({k:"DEFENSE",d,q:st.period,t:Date.now()});st.example=false;toast(`Defense: ${DEFNAME[d]}`);save();render();return}
@@ -732,6 +787,7 @@ document.addEventListener("click",e=>{
   else if(b.id==="gatab")st.view="analysis";
   else if(b.dataset.r)st.range=b.dataset.r;
   else if(b.dataset.sct){st.scTeam=b.dataset.sct}
+  else if(b.dataset.plg){st.plGroup=b.dataset.plg}
   else if(b.dataset.k)tap(b.dataset.p,b.dataset.k);
   else if(b.dataset.t)tap(null,b.dataset.t);
   else if(b.dataset.del){const x=st.events.splice(+b.dataset.del,1)[0];last=null;if(x)toast("Play deleted")}
@@ -750,6 +806,8 @@ document.addEventListener("click",e=>{
     rows.push(["","TOTALS",ptsOf(us),...PSTATS.map(([k])=>st.events.filter(e=>e.pid&&e.k===k).length),""]);
     rows.push([""],["CRESTWOOD",...US_TEAM.map(s=>s[1].toUpperCase())],["",...US_TEAM.map(([k])=>count(null,k))]);
     rows.push([oppName().toUpperCase(),...OPP_TEAM.map(s=>s[1].toUpperCase())],["",...OPP_TEAM.map(([k])=>count(null,k))]);
+    {const PS={};for(const e of us){if(!e.play)continue;const o=PS[e.play]||(PS[e.play]={n:0,pts:0,fgm:0,fga:0});o.n++;if(e.made)o.pts+=e.pts;if(e.pts>1){o.fga++;if(e.made)o.fgm++}}
+     const ks=Object.keys(PS).sort((a,b)=>PS[b].pts-PS[a].pts); if(ks.length){rows.push([""],["PLAY","GROUP","PTS","FG","SHOTS","PTS PER SHOT"]);ks.forEach(k=>{const o=PS[k];rows.push([playName(k),PLAY[k]?.group??"",o.pts,`${o.fgm}-${o.fga}`,o.n,(o.pts/o.n).toFixed(2)])})}}
     const dsx=defenseSplits(); if(dsx.length){rows.push([""],["DEFENSE","SCORED","ALLOWED","+/-","OPP FG","OPP 3PT","TOS FORCED","OPP OFF REB","PAINT TOUCHES"]);dsx.forEach(o=>rows.push([DEFNAME[o.d],o.pf,o.pa,o.pf-o.pa,`${o.fgm}-${o.fga}`,`${o.tpm}-${o.tpa}`,o.to,o.orb,o.pt]))}
     const lu=plusMinus().L; if(lu.length){rows.push([""],["LINEUP","FOR","AGAINST","+/-"]);lu.forEach(o=>rows.push([o.ids.map(id=>"#"+(st.players.find(p=>p.id===id)?.num??"?")).join(" "),o.pf,o.pa,o.pf-o.pa]))}
     const fm=(l,f)=>{const s=l.filter(f);return `${s.filter(e=>e.made).length}-${s.length}`};
