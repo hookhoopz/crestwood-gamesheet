@@ -1,0 +1,16 @@
+{
+  "name": "Crestwood Prep Gamesheet",
+  "short_name": "Gamesheet",
+  "description": "Courtside stat tracking for Crestwood Prep basketball.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#33383f",
+  "theme_color": "#33383f",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
