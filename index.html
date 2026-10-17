@@ -94,6 +94,20 @@ button:focus-visible,input:focus-visible,select:focus-visible,label:focus-within
 .tf b{font-family:var(--display);font-size:24px;color:var(--fg);line-height:1}
 .tf.bonus{border-color:var(--bad);color:var(--bad)} .tf.near{border-color:var(--warn);color:var(--warn)}
 .oncourt{display:flex;align-items:center;gap:6px}
+.defrow{display:flex;align-items:center;gap:6px}
+.defbtns{flex:1;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;min-width:0}
+.defbtns button{min-height:40px;border:1px solid var(--line);background:var(--raised);border-radius:8px;padding:2px 2px;font-family:var(--display);font-weight:700;font-size:16px;line-height:1;letter-spacing:.02em;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:0}
+.defbtns button small{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.defbtns button[aria-pressed="true"]{background:var(--royal);border-color:var(--royal);color:var(--royal-ink)}
+.defbtns button[aria-pressed="true"] small{color:var(--royal-ink);opacity:.85}
+.dlist{display:flex;flex-direction:column;gap:6px}
+.dr{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.dr.now{border-color:var(--royal);box-shadow:inset 3px 0 0 var(--royal)}
+.dr .dn{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.03em;text-transform:uppercase;line-height:1.1}
+.dr .dn small{font-family:var(--body);font-weight:600;font-size:11px;letter-spacing:.04em;color:var(--royal);margin-left:6px}
+.dr .pm{grid-row:span 2;font-family:var(--display);font-weight:800;font-size:28px;text-align:right;min-width:2.4em;font-variant-numeric:tabular-nums}
+.dr .ds{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted)}
+.dr .ds b{color:var(--fg);font-variant-numeric:tabular-nums}
 .oclbl{font-family:var(--display);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);line-height:1.05;width:38px;flex:none}
 .occhips{flex:1;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;min-width:0}
 .occhip{height:36px;border-radius:8px;background:var(--royal-soft);border:1px solid var(--royal);color:var(--royal);font-family:var(--display);font-weight:800;font-size:19px;display:grid;place-items:center;line-height:1}
@@ -284,6 +298,7 @@ textarea{width:100%;min-height:110px;font-family:var(--mono);font-size:12px;bord
       <div class="fix" role="group" aria-label="Add or remove on the sheet"><button class="plus" id="m1" aria-pressed="true" aria-label="Add mode">+</button><button class="minus" id="m2" aria-pressed="false" aria-label="Remove mode">−</button></div>
       <div class="tf" id="tfbox">Team fouls<b id="tf">0</b><span id="tfnote"></span></div>
     </div>
+    <div class="defrow"><span class="oclbl">Our<br>D</span><div class="defbtns" id="defbtns" role="group" aria-label="Current defense"></div></div>
     <div class="oncourt"><span class="oclbl">On<br>court</span><div class="occhips" id="occhips"></div><button class="subbtn" id="subbtn">Sub</button></div>
     <div class="minusnote" id="minusnote" hidden>Remove mode: tapping a box takes 1 away. Tap + to go back.</div>
   </div>
@@ -328,6 +343,11 @@ textarea{width:100%;min-height:110px;font-family:var(--mono);font-size:12px;bord
       <div class="pills" id="scfilter"></div>
       <div id="scwrap"></div>
       <div class="legend"><span><svg viewBox="-1 -1 2 2"><circle r=".75" class="mk-make" style="stroke-width:.3"/></svg>Make</span><span><svg viewBox="-1 -1 2 2"><path d="M-.7-.7L.7.7M.7-.7L-.7.7" class="mk-miss" style="stroke-width:.3"/></svg>Miss</span><span id="scsum"></span></div>
+    </section>
+    <section class="card">
+      <h2 style="margin:0">Defense · how each look is working</h2>
+      <p class="note" style="margin:0">Everything that happened while each defense was called. Best plus/minus first.</p>
+      <div class="dlist" id="dlist"></div>
     </section>
     <section class="card">
       <h2 style="margin:0">Lineups · plus / minus</h2>
@@ -393,9 +413,11 @@ const PSTATS=[["PF","Fouls"],["AST","Assists"],["DREB","Def"],["OREB","Off"],["T
 const US_TEAM=[["5050","50/50 balls"],["GUM","Gave up middle"],["KILL","Kills"],["ONE","1 More"],["CHG","Charges"],["WUB","Wall up blocks"]];
 const OPP_TEAM=[["O5050","50/50 balls"],["DBO","Def rebounds"],["OBO","Off rebounds"],["OTO","Turnovers"],["PTO","Paint touches"]];
 const TEAM=[...US_TEAM,...OPP_TEAM]; const OPPK=new Set(OPP_TEAM.map(x=>x[0]));
-const LABEL=Object.fromEntries([...PSTATS,...TEAM,["SHOT","Shot"],["LINEUP","Lineup"]]); LABEL.DREB="Def rebound"; LABEL.OREB="Off rebound";
+const DEFS=[["MAN","Man","","Man-to-man"],["Z32","3-2","zone","3-2 zone"],["Z23","2-3","zone","2-3 zone"],["PM","Press","→ man","Zone press → man"],["PZ","Press","→ zone","Zone press → zone"]];
+const DEFNAME=Object.fromEntries(DEFS.map(d=>[d[0],d[3]]));
+const LABEL=Object.fromEntries([...PSTATS,...TEAM,["SHOT","Shot"],["LINEUP","Lineup"],["DEFENSE","Defense"]]); LABEL.DREB="Def rebound"; LABEL.OREB="Off rebound";
 const ROSTER=[["0",'Melvern "Juju" Allen-Peart',"Juju A."],["2","Mekhi Martin-Burrows","Mekhi M."],["3","Mikahael Bartley","Mikahael B."],["10","Jayden Fagbohunka","Jayden F."],["11","Tyylon Ennis","Tyylon E."],["13","Joord Blasko","Joord B."],["14","Lual Machot","Lual M."],["24","Markeese Strawbridge","Markeese S."],["25","Avin Glover","Avin G."]];
-const KEY="bench-stat-sheet-v4";
+const KEY="bench-stat-sheet-v5";
 const HOOP={x:25,y:5.25};
 
 // ---------- example game ----------
@@ -412,18 +434,22 @@ function example(){
   const tseed={OTO:9,"5050":4,O5050:2,GUM:3,PTO:9,OBO:4,DBO:11,KILL:1,ONE:2,CHG:1,WUB:1};
   const ev=[];let i=0;const r=rng(7);
   for(const [pid,o] of Object.entries(seed))for(const [k,n] of Object.entries(o))for(let j=0;j<n;j++)ev.push({pid,k,q:(i%2)+1,t:++i});
-  for(const [k,n] of Object.entries(tseed))for(let j=0;j<n;j++)ev.push({pid:null,k,q:(j%2)+1,t:++i});
-  const shooters=["n0","n0","n2","n11","n11","n14","n24","n10","n2","n24"];
   const sh=[];
+  for(const [k,n] of Object.entries(tseed))for(let j=0;j<n;j++){const e={pid:null,k,q:(j%2)+1};if(["OTO","OBO","PTO"].includes(k)){e.o=r();sh.push(e)}else{e.t=++i;ev.push(e)}}
+  const shooters=["n0","n0","n2","n11","n11","n14","n24","n10","n2","n24"];
   const mk=(team,pts,pct,n)=>{for(let j=0;j<n;j++){const s=pts===1?{x:null,y:null}:spot(pts,r);
     sh.push({k:"SHOT",team,pts,made:r()<pct,x:s.x,y:s.y,pid:null,q:(j%2)+1,o:r()})}};
   mk("us",2,.52,22);mk("us",3,.36,11);mk("us",1,.7,8);mk("opp",2,.45,20);mk("opp",3,.3,12);mk("opp",1,.65,9);
   sh.sort((a,b)=>a.q-b.q||a.o-b.o);
   const fives=[["n0","n2","n11","n14","n24"],["n0","n10","n11","n13","n25"],["n2","n3","n10","n14","n24"],["n0","n2","n11","n14","n10"]];
   const tilt=[.06,-.08,0,.05]; let li=-1;
+  const dorder=["MAN","Z23","PM","MAN","Z32","PZ","Z23","MAN"], dtilt={MAN:.03,Z23:.08,Z32:-.06,PM:.02,PZ:-.03}; let di=-1;
   sh.forEach((s,j)=>{if(j%21===0){li=(li+1)%fives.length;ev.push({k:"LINEUP",ids:fives[li],q:s.q,t:++i})}
+    if(j%14===0){di=(di+1)%dorder.length;ev.push({k:"DEFENSE",d:dorder[di],q:s.q,t:++i})}
+    delete s.o; s.t=++i;
+    if(s.k!=="SHOT"){ev.push(s);return}
     const five=fives[li]; if(s.team==="us")s.pid=five[Math.floor(r()*5)];
-    if(s.pts>1)s.made=r()<(s.team==="us"?.47+tilt[li]:.45-tilt[li]); delete s.o; s.t=++i; ev.push(s)});
+    if(s.pts>1)s.made=r()<(s.team==="us"?.47+tilt[li]:.45-tilt[li]-dtilt[dorder[di]]); ev.push(s)});
   return {example:true,opp:"Ft Erie",oppImg:null,period:2,view:"sheet",range:"game",scTeam:"us",scPlayer:"",lastTeam:"us",players,events:ev,flimit:5,blimit:5,minus:false};
 }
 let st; try{st=JSON.parse(localStorage.getItem(KEY))}catch(e){}
@@ -455,6 +481,20 @@ function plusMinus(inR=()=>true){
     for(const id of cur)P[id]=(P[id]||0)+v;
   }
   return{L:Object.values(L).sort((a,b)=>(b.pf-b.pa)-(a.pf-a.pa)||b.pf-a.pf),P};
+}
+const curDef=()=>{for(let i=st.events.length-1;i>=0;i--)if(st.events[i].k==="DEFENSE")return st.events[i].d;return null};
+function defenseSplits(inR=()=>true){
+  let cur=null;const D={};
+  const ent=d=>D[d]||(D[d]={d,pf:0,pa:0,fgm:0,fga:0,tpm:0,tpa:0,to:0,orb:0,pt:0});
+  for(const e of st.events){
+    if(e.k==="DEFENSE"){cur=e.d;if(inR(e.q))ent(cur);continue}
+    if(!cur||!inR(e.q))continue;
+    const o=ent(cur);
+    if(e.k==="SHOT"){if(e.team==="us"){if(e.made)o.pf+=e.pts}
+      else{if(e.made)o.pa+=e.pts;if(e.pts>1){o.fga++;if(e.made)o.fgm++}if(e.pts===3){o.tpa++;if(e.made)o.tpm++}}}
+    else if(e.k==="OTO")o.to++; else if(e.k==="OBO")o.orb++; else if(e.k==="PTO")o.pt++;
+  }
+  return Object.values(D).sort((a,b)=>(b.pf-b.pa)-(a.pf-a.pa)||a.pa-b.pa);
 }
 const fmtPM=v=>v>0?"+"+v:v<0?"−"+Math.abs(v):"0";
 const pmCls=v=>v>0?"pos":v<0?"neg":"";
@@ -555,6 +595,8 @@ function renderHeader(){
   $("occhips").innerHTML=cur.length?cur.map(id=>{const p=st.players.find(x=>x.id===id);const fo=count(id,"PF")>=lim;return `<span class="occhip ${fo?"out":""}" title="${esc(p.full)}${fo?" (fouled out)":""}">${esc(p.num)}</span>`}).join("")
     :`<span class="occhip empty" style="grid-column:1/-1">Tap Sub to set your starting 5</span>`;
   $("subbtn").textContent=cur.length?"Sub":"Set 5";
+  const cd=curDef();
+  $("defbtns").innerHTML=DEFS.map(([k,a,b,full])=>`<button data-def="${k}" aria-pressed="${cd===k}" aria-label="${full}">${a}${b?`<small>${b}</small>`:""}</button>`).join("");
 }
 function renderSheet(){
   const lim=+st.flimit;
@@ -610,6 +652,11 @@ function renderAnalysis(){
   $("scwrap").innerHTML=courtSVG(marks);
   const mm=marks.filter(e=>e.made).length; $("scsum").textContent=marks.length?`${mm}-${marks.length} from the field (${Math.round(mm/marks.length*100)}%)`:"No shots charted yet";
   const sel=$("scplayer"); if(sel)sel.onchange=e=>{st.scPlayer=e.target.value;save();renderAnalysis()};
+  // defense
+  const DS=defenseSplits(inR), cdef=curDef();
+  $("dlist").innerHTML=DS.length?DS.map(o=>{const pm=o.pf-o.pa;return `<div class="dr ${o.d===cdef?"now":""}"><span class="dn">${DEFNAME[o.d]}${o.d===cdef?"<small>In it now</small>":""}</span><span class="pm ${pmCls(pm)}">${fmtPM(pm)}</span>
+    <div class="ds"><span>Allowed <b>${o.pa}</b></span><span>Scored <b>${o.pf}</b></span><span>Opp FG <b>${o.fgm}-${o.fga}</b>${o.fga?` (${Math.round(o.fgm/o.fga*100)}%)`:""}</span><span>Opp 3s <b>${o.tpm}-${o.tpa}</b></span><span>TOs forced <b>${o.to}</b></span><span>Opp off reb <b>${o.orb}</b></span><span>Paint touches <b>${o.pt}</b></span></div></div>`}).join("")
+    :`<p class="note" style="margin:0">No defenses called yet. Tap a defense in the bar at the top when you switch looks.</p>`;
   // lineups
   const {L,P}=plusMinus(inR); const curKey=[...onCourt()].sort().join(",");
   const numOf=id=>esc(st.players.find(p=>p.id===id)?.num??"?");
@@ -626,6 +673,7 @@ function renderAnalysis(){
 function logText(e){
   if(e.k==="SHOT"){const by=e.team==="us"?(e.pid?who(e.pid):"Crestwood"):oppName();
     return `${esc(by)} — ${e.pts===1?"FT":e.pts+" PT"} <span class="${e.made?"mk":"ms"}">${e.made?"make":"miss"}</span>${e.pts>1&&e.x!=null?" · "+zone(e):""}`}
+  if(e.k==="DEFENSE")return `Defense — <b>${DEFNAME[e.d]}</b>`;
   if(e.k==="LINEUP")return `Sub — on court: ${byNum(e.ids).map(id=>"#"+esc(st.players.find(p=>p.id===id)?.num??"?")).join(" ")}`;
   if(OPPK.has(e.k))return `${esc(oppName())} — ${LABEL[e.k]}`;
   return `${esc(e.pid?who(e.pid):"Crestwood")} — ${LABEL[e.k]}`;
@@ -667,6 +715,8 @@ document.addEventListener("click",e=>{
   if(b.dataset.shooter){commitShot(b.dataset.shooter);return}
   if(b.id==="ovnoshooter"||b.id==="ovsave"){commitShot(null);return}
   if(b.dataset.shot){openShot(+b.dataset.shot);return}
+  if(b.dataset.def){const d=b.dataset.def;if(curDef()===d){toast(`Already in ${DEFNAME[d]}`);return}
+    st.events.push({k:"DEFENSE",d,q:st.period,t:Date.now()});st.example=false;toast(`Defense: ${DEFNAME[d]}`);save();render();return}
   if(b.id==="subbtn"){openSub();return}
   if(b.id==="subcancel"){closeSub();return}
   if(b.id==="subclear"){subSel=[];renderSub();return}
@@ -686,7 +736,7 @@ document.addEventListener("click",e=>{
   else if(b.dataset.t)tap(null,b.dataset.t);
   else if(b.dataset.del){const x=st.events.splice(+b.dataset.del,1)[0];last=null;if(x)toast("Play deleted")}
   else if(b.id==="m1")st.minus=false; else if(b.id==="m2")st.minus=true;
-  else if(b.id==="undo"){const x=st.events.pop();last=null;if(x)toast(`Undid: ${x.k==="SHOT"?"shot":x.k==="LINEUP"?"sub":LABEL[x.k]}`)}
+  else if(b.id==="undo"){const x=st.events.pop();last=null;if(x)toast(`Undid: ${x.k==="SHOT"?"shot":x.k==="LINEUP"?"sub":x.k==="DEFENSE"?"defense change":LABEL[x.k]}`)}
   else if(b.id==="rmlogo"){st.oppImg=null}
   else if(b.id==="newg"){$("confirm").hidden=false;return}
   else if(b.id==="no"){$("confirm").hidden=true;return}
@@ -700,6 +750,7 @@ document.addEventListener("click",e=>{
     rows.push(["","TOTALS",ptsOf(us),...PSTATS.map(([k])=>st.events.filter(e=>e.pid&&e.k===k).length),""]);
     rows.push([""],["CRESTWOOD",...US_TEAM.map(s=>s[1].toUpperCase())],["",...US_TEAM.map(([k])=>count(null,k))]);
     rows.push([oppName().toUpperCase(),...OPP_TEAM.map(s=>s[1].toUpperCase())],["",...OPP_TEAM.map(([k])=>count(null,k))]);
+    const dsx=defenseSplits(); if(dsx.length){rows.push([""],["DEFENSE","SCORED","ALLOWED","+/-","OPP FG","OPP 3PT","TOS FORCED","OPP OFF REB","PAINT TOUCHES"]);dsx.forEach(o=>rows.push([DEFNAME[o.d],o.pf,o.pa,o.pf-o.pa,`${o.fgm}-${o.fga}`,`${o.tpm}-${o.tpa}`,o.to,o.orb,o.pt]))}
     const lu=plusMinus().L; if(lu.length){rows.push([""],["LINEUP","FOR","AGAINST","+/-"]);lu.forEach(o=>rows.push([o.ids.map(id=>"#"+(st.players.find(p=>p.id===id)?.num??"?")).join(" "),o.pf,o.pa,o.pf-o.pa]))}
     const fm=(l,f)=>{const s=l.filter(f);return `${s.filter(e=>e.made).length}-${s.length}`};
     rows.push([""],["SHOOTING","FG","3PT","FT"],["Crestwood",fm(us,e=>e.pts>1),fm(us,e=>e.pts===3),fm(us,e=>e.pts===1)],[oppName(),fm(op,e=>e.pts>1),fm(op,e=>e.pts===3),fm(op,e=>e.pts===1)]);

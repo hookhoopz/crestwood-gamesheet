@@ -1,6 +1,6 @@
 // Offline worker: caches the app on first visit, then serves it with no connection.
 // Bump VERSION whenever you change index.html so phones pick up the new copy.
-const VERSION = 'gamesheet-v2';
+const VERSION = 'gamesheet-v3';
 const CORE = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
